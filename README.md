@@ -1,91 +1,360 @@
-Chat Sicura con Crittografia RSA
-Questo progetto implementa un'applicazione di chat client-server sicura che utilizza la crittografia asimmetrica RSA per garantire la confidenzialità, l'integrità e l'autenticazione dei messaggi. 
-L'architettura è basata su un server multi-threaded in grado di gestire più client contemporaneamente.
 
-1. Architettura Generale
-L'applicazione si basa su un'architettura client-server. Il server è progettato per essere robusto e scalabile, utilizzando il multi-threading per gestire connessioni multiple e simultanee.
-Quando un client si connette, il server avvia un thread dedicato (ClientHandler) che gestisce l'intero ciclo di vita della comunicazione con quel client: dallo scambio iniziale delle chiavi,
-passando per l'autenticazione, fino alla gestione dei messaggi di chat. 
+-----
 
-Il flusso è il seguente:
-Il Server si avvia, genera la propria coppia di chiavi RSA e si mette in ascolto di nuove connessioni.
-Un Client si connette e il server crea un thread dedicato per gestirlo.
-Il thread handle_client si occupa di tutte le interazioni successive:
-Scambio di chiavi pubbliche.
-Autenticazione dell'utente (registrazione o login).
-Gestione della sessione di chat crittografata.
+# 🛡️ Chat Sicura con Crittografia RSA
 
-2. Generazione delle Chiavi RSA
-La sicurezza del sistema si fonda sull'algoritmo RSA. Le coppie di chiavi (pubblica e privata) vengono generate seguendo i passaggi matematici standard:
-Generazione dei Primi: Vengono generati due numeri primi grandi e distinti, p e q.
-Calcolo del Modulo: Si calcola il modulo n, che farà parte sia della chiave pubblica che di quella privata.
-Funzione Totiente di Eulero:
-Si calcola phi(n) (phi di n), necessaria per trovare gli esponenti.
-Esponente Pubblico (e): Si sceglie un numero intero e tale che sia coprimo con phi(n) e 1 < e < phi(n).
-Esponente Privato (d): Si calcola l'esponente privato d come l'inverso moltiplicativo modulare di e rispetto a phi(n).
-Il risultato è una chiave pubblica (e, n), che può essere condivisa, e una chiave privata (d, n), che deve rimanere segreta.
+Questo progetto implementa un'applicazione di chat client-server sicura che utilizza la crittografia asimmetrica **RSA** per garantire la **confidenzialità**, l'**integrità** e l'**autenticazione** dei messaggi. L'architettura è basata su un server multi-threaded in grado di gestire più client contemporaneamente.
 
-3. Processo di Autenticazione
-Per garantire che solo gli utenti autorizzati possano accedere, è stato implementato un meccanismo di autenticazione basato su un modello challenge-response.
+-----
 
-Scambio di Chiavi Pubbliche: Appena connesso, il client scambia la propria chiave pubblica con quella del server.
-Scelta Utente: L'utente può scegliere se registrarsi o effettuare il login.
-Registrazione: L'utente fornisce un nome utente. Il server salva la sua chiave pubblica associandola a quel nome.
+## 🏗️ 1. Architettura Generale
 
-Login:
-Il server genera una "challenge", ovvero un messaggio casuale.
-Cripta la challenge con la chiave pubblica dell'utente (recuperata in fase di registrazione) e la invia al client.
-Il client, e solo lui, può decriptare la challenge usando la sua chiave privata.
-Il client invia la challenge decriptata al server.
-Il server verifica che la risposta corrisponda alla challenge originale. Se sì, l'utente è autenticato e la sessione di chat può iniziare.
+L'applicazione si basa su un'architettura **client-server**. Il server è progettato per essere robusto e scalabile, utilizzando il multi-threading per gestire connessioni multiple e simultanee.
 
-4. Crittografia e Decrittografia dei Messaggi
-I messaggi scambiati vengono protetti tramite crittografia RSA. Poiché RSA opera su numeri, le stringhe vengono prima convertite in rappresentazioni numeriche.
-Il flusso di crittografia gestisce messaggi di qualsiasi dimensione:
-Conversione: Il messaggio originale (stringa) viene convertito in un grande numero intero.
-Controllo Dimensione: Si verifica se il numero è più piccolo del modulo n della chiave RSA.
-Messaggio Piccolo (1 Blocco): Se numero < n, il messaggio viene crittografato direttamente con la funzione encrypt().
-Messaggio Grande (N Blocchi): Se numero >= n, il messaggio viene suddiviso in blocchi più piccoli, ognuno dei quali viene crittografato singolarmente. Si ottiene così una lista di messaggi cifrati.
-Decrittografia: Il processo inverso viene applicato per decifrare. I singoli blocchi cifrati vengono decriptati e poi riassemblati per ricostruire il numero originale, che viene infine riconvertito nella stringa del messaggio finale.
+Quando un client si connette, il server avvia un thread dedicato (`ClientHandler`) che gestisce l'intero ciclo di vita della comunicazione con quel client: dallo scambio iniziale delle chiavi, passando per l'autenticazione, fino alla gestione dei messaggi di chat.
 
-5. Gestione dei Messaggi nella Chat
-Una volta autenticato, l'utente può inviare messaggi. Il client analizza l'input per determinare il tipo di azione:
-Messaggio Broadcast: Qualsiasi testo che non inizia con un comando viene inviato a tutti gli utenti connessi.
-Messaggio Privato: Usando il comando /private <utente> <messaggio>, un utente può inviare un messaggio visibile solo al destinatario specificato.
-Disconnessione: Con il comando /quit, il client termina la connessione in modo pulito.
+#### Flusso di base:
 
-Per ogni messaggio inviato (broadcast o privato), vengono eseguiti due passaggi di sicurezza fondamentali:
-Crittografia: Il messaggio viene crittografato usando la chiave pubblica del server. Questo garantisce che solo il server possa leggerne il contenuto.
-Firma Digitale: Il messaggio viene firmato usando la chiave privata del mittente. Questo permette al server (e agli altri client) di verificare l'autenticità del mittente.
+1.  Il **Server** si avvia, genera la propria coppia di chiavi RSA e si mette in ascolto di nuove connessioni.
+2.  Un **Client** si connette e il server crea un thread dedicato per gestirlo.
+3.  Il thread `handle_client` si occupa di tutte le interazioni successive:
+      * Scambio di chiavi pubbliche.
+      * Autenticazione dell'utente (registrazione o login).
+      * Gestione della sessione di chat crittografata.
 
-6. Sicurezza e Firma Digitale
-Oltre alla crittografia, il sistema implementa la firma digitale per garantire autenticità e integrità.
+<!-- end list -->
 
-Verifica della Firma
-Quando un messaggio firmato viene ricevuto, il destinatario esegue i seguenti passaggi:
-Calcola l'hash SHA-256 del messaggio originale.
-Decripta la firma digitale allegata usando la chiave pubblica del mittente. Il risultato è l'hash originale calcolato dal mittente.
-Confronta i due hash: se corrispondono, la firma è valida e si ha la certezza che il messaggio non è stato alterato e proviene dall'utente dichiarato.
+```
+SERVER AVVIATO
+        ↓
+┌─────────────────────┐
+│ Genera chiavi RSA   │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ In ascolto di       │
+│ connessioni...      │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Nuovo client si     │
+│ connette            │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Il Server accetta   │
+│ la connessione      │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Viene avviato un    │
+│ Thread dedicato per │
+│ il client           │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ 1. Scambio chiavi   │
+│    pubbliche        │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ 2. Autenticazione   │
+│    utente           │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ 3. Sessione di chat │
+│    crittografata    │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Fine sessione       │
+└─────────────────────┘
+```
 
-Gestione delle Sessioni
-Per prevenire l'uso improprio di sessioni lasciate aperte, ogni sessione utente ha una durata limitata (es. 3600 secondi).
-Se un utente autenticato rimane inattivo oltre questo timeout, la sua sessione viene terminata automaticamente dal server.
+-----
 
-7. Comunicazione di Rete
-La comunicazione tra client e server avviene tramite socket TCP. Per garantire uno scambio di dati affidabile, i messaggi vengono serializzati in formato JSON e strutturati secondo un protocollo semplice:
+## 🔑 2. Generazione delle Chiavi RSA
 
-Invio di un Messaggio
-I dati vengono convertiti in una stringa JSON.
-La stringa JSON viene codificata in byte.
-La lunghezza del messaggio in byte viene calcolata e inviata come un intero a 4 byte (formato big-endian).
-Viene inviato il messaggio effettivo.
+La sicurezza del sistema si fonda sull'algoritmo **RSA**. Le coppie di chiavi (pubblica e privata) vengono generate seguendo i passaggi matematici standard:
 
-Ricezione di un Messaggio
-Si leggono i primi 4 byte per determinare la lunghezza del messaggio in arrivo.
-Si legge esattamente quel numero di byte dal socket.
-I byte ricevuti vengono decodificati e riconvertiti da JSON al formato dati originale.
+1.  **Generazione dei Primi**: Vengono generati due numeri primi grandi e distinti, $p$ e $q$.
+2.  **Calcolo del Modulo**: Si calcola il modulo $n = p \\times q$, che farà parte sia della chiave pubblica che di quella privata.
+3.  **Funzione Totiente di Eulero**: Si calcola $\\phi(n) = (p-1)(q-1)$, necessaria per trovare gli esponenti.
+4.  **Esponente Pubblico (e)**: Si sceglie un numero intero $e$ tale che sia coprimo con $\\phi(n)$ e $1 \< e \< \\phi(n)$.
+5.  **Esponente Privato (d)**: Si calcola l'esponente privato $d$ come l'inverso moltiplicativo modulare di $e$ rispetto a $\\phi(n)$.
 
-8. Persistenza dei Dati
+Il risultato è una **chiave pubblica ($e, n$)**, che può essere condivisa, e una **chiave privata ($d, n$)**, che deve rimanere segreta.
 
-Dati Utente (Server): Quando un nuovo utente si registra, le sue informazioni (username e chiave pubblica) vengono aggiunte a un dizionario e salvate nel file users.pkl.
-Chiavi (Client): Quando un client genera o riceve le sue chiavi per la prima volta, le salva localmente in un file {nomeutente}_keys.pkl, in modo da non doverle rigenerare ad ogni avvio.
+```
+AVVIO GENERAZIONE CHIAVI
+        ↓
+┌─────────────────────┐
+│ generate_prime()    │ ← Genera primo p
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ generate_prime()    │ ← Genera primo q (≠ p)
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ n = p × q           │ ← Calcola modulo
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ φ(n) = (p-1)(q-1)   │ ← Calcola funzione di Eulero
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│find_random_coprime_e│ ← Trova esponente pubblico e
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ modinv(e, φ)        │ ← Calcola esponente privato d
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ public_key = (e,n)  │
+│ private_key = (d,n) │
+└─────────────────────┘
+```
+
+-----
+
+## 🔐 3. Processo di Autenticazione
+
+Per garantire che solo gli utenti autorizzati possano accedere, è stato implementato un meccanismo di autenticazione basato su un modello **challenge-response**.
+
+#### Flusso di Autenticazione:
+
+1.  **Scambio di Chiavi Pubbliche**: Appena connesso, il client scambia la propria chiave pubblica con quella del server.
+2.  **Scelta Utente**: L'utente può scegliere se registrarsi o effettuare il login.
+3.  **Registrazione**: L'utente fornisce un nome utente. Il server salva la sua chiave pubblica associandola a quel nome.
+4.  **Login**:
+    1.  Il server genera una "challenge", ovvero un messaggio casuale.
+    2.  Cripta la challenge con la chiave pubblica dell'utente e la invia al client.
+    3.  Il client, e solo lui, può decriptare la challenge usando la sua chiave privata.
+    4.  Il client invia la challenge decriptata al server.
+    5.  Il server verifica che la risposta corrisponda. Se sì, l'utente è autenticato.
+
+<!-- end list -->
+
+```
+CLIENT CONNESSO
+        ↓
+┌─────────────────────┐
+│exchange_public_keys │ ← Scambio chiavi pubbliche
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Scelta utente:      │
+│ 1. Register         │
+│ 2. Login            │
+└─────────────────────┘
+        ├────────────────>──────────┐
+        ↓                           ↓
+ ┌─────────┐                  ┌──────────────┐
+ │REGISTER │                  │    LOGIN     │
+ └─────────┘                  └──────────────┘
+        ↓                           ↓
+┌─────────────────────┐ ┌─────────────────────┐
+│ register_user()     │ │create_challenge_for_│
+│ Salva chiave pub    │ │user()               │
+└─────────────────────┘ └─────────────────────┘
+        ↓                           ↓
+┌─────────────────────┐ ┌─────────────────────┐
+│ "Registrazione OK"  │ │ encrypt(challenge,  │
+│ Torna al login      │ │ user_public_key)    │
+└─────────────────────┘ └─────────────────────┘
+                                    ↓
+                            ┌─────────────────────┐
+                            │ Client decritta     │
+                            │ con private_key     │
+                            └─────────────────────┘
+                                    ↓
+                            ┌─────────────────────┐
+                            │verify_challenge_    │
+                            │response()           │
+                            └─────────────────────┘
+                                    ↓
+                            ┌─────────────────────┐
+                            │ AUTENTICATO         │
+                            │ Avvia chat          │
+                            └─────────────────────┘
+```
+
+-----
+
+## 📝 4. Crittografia e Decrittografia dei Messaggi
+
+Poiché RSA opera su numeri, le stringhe vengono prima convertite in rappresentazioni numeriche. Il sistema gestisce messaggi di qualsiasi dimensione suddividendoli in blocchi, se necessario.
+
+```
+MESSAGGIO ORIGINALE (stringa)
+        ↓
+┌─────────────────────┐
+│ string_to_number()  │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ Controllo dimensione│ ← number >= n?
+└─────────────────────┘
+        ├────────────────>──────────┐
+        ↓                           ↓
+  ┌─────────┐                   ┌──────────────┐
+  │ PICCOLA │                   │    GRANDE    │
+  │(1 blocco)│                  │ (N blocchi)  │
+  └─────────┘                   └──────────────┘
+        ↓                           ↓
+   encrypt()                  _encrypt_large_string()
+        ↓                           ↓
+   [cipher]                   [cipher1, cipher2, ...]
+        ├────────────────>──────────┤
+        ↓                           ↓
+   decrypt()                  _decrypt_large_string()
+        ↓                           ↓
+┌─────────────────────┐
+│ number_to_string()  │
+└─────────────────────┘
+        ↓
+MESSAGGIO FINALE
+```
+
+-----
+
+## 💬 5. Gestione dei Messaggi nella Chat
+
+Una volta autenticato, l'utente può inviare messaggi.
+
+  * **Messaggio Broadcast**: Qualsiasi testo che non inizia con un comando viene inviato a tutti.
+  * **Messaggio Privato**: Con `/private <utente> <messaggio>`, il messaggio è visibile solo al destinatario.
+  * **Disconnessione**: Con `/quit`, il client termina la connessione.
+
+Per ogni messaggio, vengono eseguiti due passaggi di sicurezza:
+
+1.  **Crittografia**: Il messaggio viene crittografato con la chiave pubblica del server.
+2.  **Firma Digitale**: Il messaggio viene firmato con la chiave privata del mittente per verificarne l'autenticità.
+
+<!-- end list -->
+
+```
+MESSAGGIO UTENTE
+        ↓
+┌─────────────────────┐
+│ Analisi comando:    │
+│ /private, /quit     │
+│ o messaggio normale │
+└─────────────────────┘
+        ├─────────────────────>───────────────────┐
+        ↓                                         ↓
+  ┌─────────┐                 ┌──────────────┐  ┌──────────────┐
+  │ PRIVATO │                 │  BROADCAST   │  │    QUIT      │
+  └─────────┘                 └──────────────┘  └──────────────┘
+        ↓                           ↓                 ↓
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│encrypt_string()     │ │encrypt_string()     │ │ Termina connessione │
+│con server_public_key│ │con server_public_key│ └─────────────────────┘
+└─────────────────────┘ └─────────────────────┘
+        ↓                           ↓
+┌─────────────────────┐ ┌─────────────────────┐
+│sign_message()       │ │sign_message()       │
+│con private_key      │ │con private_key      │
+└─────────────────────┘ └─────────────────────┘
+        ↓                           ↓
+┌─────────────────────┐ ┌─────────────────────┐
+│send_private_message │ │broadcast_message()  │
+│(target_user)        │ │(tutti i client)     │
+└─────────────────────┘ └─────────────────────┘
+```
+
+-----
+
+## ✍️ 6. Sicurezza e Firma Digitale
+
+Oltre alla crittografia, il sistema implementa la **firma digitale** per garantire autenticità e integrità.
+
+### Verifica della Firma
+
+Quando un messaggio firmato viene ricevuto, il destinatario:
+
+1.  Calcola l'hash **SHA-256** del messaggio originale.
+2.  Decripta la firma digitale allegata usando la **chiave pubblica del mittente**.
+3.  Confronta i due hash: se corrispondono, la firma è valida.
+
+### Gestione delle Sessioni
+
+Ogni sessione utente ha una durata limitata (es. 3600 secondi). Se un utente rimane inattivo oltre questo timeout, la sua sessione viene terminata automaticamente dal server.
+
+-----
+
+## 🌐 7. Comunicazione di Rete
+
+La comunicazione avviene tramite socket **TCP**. I messaggi vengono serializzati in formato **JSON** e inviati con un protocollo lunghezza-valore.
+
+#### Invio di un Messaggio
+
+1.  I dati vengono convertiti in una stringa JSON e codificati in byte.
+2.  La lunghezza del messaggio in byte viene inviata come un intero a 4 byte (big-endian).
+3.  Viene inviato il messaggio effettivo.
+
+#### Ricezione di un Messaggio
+
+1.  Si leggono i primi 4 byte per determinare la lunghezza del messaggio.
+2.  Si legge esattamente quel numero di byte dal socket.
+3.  I byte ricevuti vengono decodificati da JSON al formato dati originale.
+
+-----
+
+## 💾 8. Persistenza dei Dati
+
+  * **Dati Utente (Server)**: Quando un nuovo utente si registra, le sue informazioni (username e chiave pubblica) vengono salvate nel file `users.pkl`.
+  * **Chiavi (Client)**: Il client salva le proprie chiavi localmente in un file `{nomeutente}_keys.pkl` per non doverle rigenerare ad ogni avvio.
+
+-----
+
+## ⚙️ 9. Algoritmi Core
+
+#### Esponenziazione Modulare (per Crittografia)
+
+```
+modular_exponentiation(base, exp, mod)
+        ↓
+┌─────────────────────┐
+│ result = 1          │
+│ base = base % mod   │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ while exp > 0:      │
+│   if exp % 2 == 1:  │
+│     result *= base  │
+│   exp >>= 1         │
+│   base = base²      │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ return result       │
+└─────────────────────┘
+```
+
+#### Algoritmo di Euclide Esteso (per Inverso Modulare)
+
+```
+egcd(a, b)
+        ↓
+┌─────────────────────┐
+│ x0=1, x1=0          │
+│ y0=0, y1=1          │
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ while b != 0:       │
+│   q = a // b        │
+│   a, b = b, a % b   │
+│   aggiorna x0,x1,y0,y1│
+└─────────────────────┘
+        ↓
+┌─────────────────────┐
+│ return (gcd, x, y)  │
+└─────────────────────┘
+```
