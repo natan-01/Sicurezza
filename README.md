@@ -1,13 +1,13 @@
 
 -----
 
-# 🛡️ Chat Sicura con Crittografia RSA
+# Chat Sicura con Crittografia RSA
 
 Questo progetto implementa un'applicazione di chat client-server sicura che utilizza la crittografia asimmetrica **RSA** per garantire la **confidenzialità**, l'**integrità** e l'**autenticazione** dei messaggi. L'architettura è basata su un server multi-threaded in grado di gestire più client contemporaneamente.
 
 -----
 
-## 🏗️ 1. Architettura Generale
+## 1. Architettura Generale
 
 L'applicazione si basa su un'architettura **client-server**. Il server è progettato per essere robusto e scalabile, utilizzando il multi-threading per gestire connessioni multiple e simultanee.
 
@@ -74,7 +74,7 @@ SERVER AVVIATO
 
 -----
 
-## 🔑 2. Generazione delle Chiavi RSA
+## 2. Generazione delle Chiavi RSA
 
 La sicurezza del sistema si fonda sull'algoritmo **RSA**. Le coppie di chiavi (pubblica e privata) vengono generate seguendo i passaggi matematici standard:
 
@@ -121,7 +121,7 @@ AVVIO GENERAZIONE CHIAVI
 
 -----
 
-## 🔐 3. Processo di Autenticazione
+## 3. Processo di Autenticazione
 
 Per garantire che solo gli utenti autorizzati possano accedere, è stato implementato un meccanismo di autenticazione basato su un modello **challenge-response**.
 
@@ -185,7 +185,7 @@ CLIENT CONNESSO
 
 -----
 
-## 📝 4. Crittografia e Decrittografia dei Messaggi
+## 4. Crittografia e Decrittografia dei Messaggi
 
 Poiché RSA opera su numeri, le stringhe vengono prima convertite in rappresentazioni numeriche. Il sistema gestisce messaggi di qualsiasi dimensione suddividendoli in blocchi, se necessario.
 
@@ -222,7 +222,7 @@ MESSAGGIO FINALE
 
 -----
 
-## 💬 5. Gestione dei Messaggi nella Chat
+## 5. Gestione dei Messaggi nella Chat
 
 Una volta autenticato, l'utente può inviare messaggi.
 
@@ -269,7 +269,7 @@ MESSAGGIO UTENTE
 
 -----
 
-## ✍️ 6. Sicurezza e Firma Digitale
+## 6. Sicurezza e Firma Digitale
 
 Oltre alla crittografia, il sistema implementa la **firma digitale** per garantire autenticità e integrità.
 
@@ -287,7 +287,7 @@ Ogni sessione utente ha una durata limitata (es. 3600 secondi). Se un utente rim
 
 -----
 
-## 🌐 7. Comunicazione di Rete
+## 7. Comunicazione di Rete
 
 La comunicazione avviene tramite socket **TCP**. I messaggi vengono serializzati in formato **JSON** e inviati con un protocollo lunghezza-valore.
 
@@ -305,7 +305,7 @@ La comunicazione avviene tramite socket **TCP**. I messaggi vengono serializzati
 
 -----
 
-## 💾 8. Persistenza dei Dati
+## 8. Persistenza dei Dati
 
   * **Dati Utente (Server)**: Quando un nuovo utente si registra, le sue informazioni (username e chiave pubblica) vengono salvate nel file `users.pkl`.
   * **Chiavi (Client)**: Il client salva le proprie chiavi localmente in un file `{nomeutente}_keys.pkl` per non doverle rigenerare ad ogni avvio.
