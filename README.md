@@ -294,7 +294,7 @@ La comunicazione avviene tramite socket **TCP**. I messaggi vengono serializzati
 #### Invio di un Messaggio
 
 1.  I dati vengono convertiti in una stringa JSON e codificati in byte.
-2.  La lunghezza del messaggio in byte viene inviata come un intero a 4 byte (big-endian).
+2.  La lunghezza del messaggio in byte viene inviata come un intero a 4 byte.
 3.  Viene inviato il messaggio effettivo.
 
 #### Ricezione di un Messaggio
